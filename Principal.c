@@ -12,19 +12,15 @@ typedef struct
     char id[50];
     char titulo[150];
     char desarrollador[100];
-    char editor[100];
-    List *etiquetas; // Lista de strings con los tags
+    List *categorias; // Lista de strings con los tags
     float precio;
     int cantidad_dlc;
     int metacritic;
     int recomendaciones;
     float puntuacion_popularidad;
     char nivel_calificacion[50];
-    char nivel_metacritic[50];
     int es_multijugador;
     char plataformas[200];
-    int horas_steam;
-    float horas_ultimate;
     char fecha_lanzamiento[50];
 
     // Lista de Adyacencia
@@ -117,15 +113,15 @@ void mostrar_menu_principal()
 
 void mostrar_juego(Videojuego *juego)
 {
-    printf("\nID: %s | Titulo: %s | Metacritic: %d\n", juego->id, juego->titulo, juego->metacritic);
+    printf("\nTitulo: %s | Metacritic: %d\n", juego->id, juego->titulo, juego->metacritic);
     printf("Desarrollador: %s | Precio: $%.2f | Multijugador: %s\n", juego->desarrollador, juego->precio, juego->es_multijugador ? "Si" : "No");
 
     printf("Etiquetas: ");
-    char *tag = list_first(juego->etiquetas);
+    char *tag = list_first(juego->categorias);
     while (tag != NULL)
     {
         printf("[%s] ", tag);
-        tag = list_next(juego->etiquetas);
+        tag = list_next(juego->categorias);
     }
     printf("\n----------------------------------------\n");
 }
@@ -158,30 +154,26 @@ void cargar_juegos(Map *grafo_juegos)
         Videojuego *juego = (Videojuego *)malloc(sizeof(Videojuego));
         if (juego == NULL) exit(EXIT_FAILURE);
 
-        strcpy(juego->id, campos[0]);
-        strcpy(juego->titulo, campos[1]);
-        strcpy(juego->desarrollador, campos[2]);
-        strcpy(juego->editor, campos[3]);
+        strcpy(juego->id, campos[0]);                      // ID
+        strcpy(juego->titulo, campos[1]);                  // TITULO
+        strcpy(juego->desarrollador, campos[2]);           // ESTUDIO
 
-        juego->etiquetas = split_string(campos[4], ",");
+        juego->categorias = split_string(campos[4], ",");  // CATEGORIA
 
-        juego->precio = atof(campos[5]);
-        juego->cantidad_dlc = atoi(campos[6]);
-        juego->metacritic = atoi(campos[7]);
-        juego->recomendaciones = atoi(campos[8]);
-        juego->puntuacion_popularidad = atof(campos[9]);
+        juego->precio = atof(campos[5]);                   // PRECIO
+        juego->cantidad_dlc = atoi(campos[6]);             // DLC'S
+        juego->metacritic = atoi(campos[7]);               // METACRITIC
+        juego->recomendaciones = atoi(campos[8]);          // RECOMENDACIONES
+        juego->puntuacion_popularidad = atof(campos[9]);   // PUNTUACION
 
-        strcpy(juego->nivel_calificacion, campos[10]);
-        strcpy(juego->nivel_metacritic, campos[11]);
+        strcpy(juego->nivel_calificacion, campos[10]);     // CALIFICACION (STRING)
 
-        juego->es_multijugador = atoi(campos[12]);
-        strcpy(juego->plataformas, campos[13]);
+        juego->es_multijugador = atoi(campos[12]);         // MULTIJUGADOR
+        strcpy(juego->plataformas, campos[13]);            // PLATAFORMAS
 
-        juego->horas_steam = atoi(campos[14]);
-        juego->horas_ultimate = atof(campos[15]);
-        strcpy(juego->fecha_lanzamiento, campos[16]);
+        strcpy(juego->fecha_lanzamiento, campos[16]);      // FECHA
 
-        juego->juegos_similares = list_create();
+        juego->juegos_similares = list_create();           // LISTA ADYACENCIA
 
         map_insert(grafo_juegos, juego->id, juego);
     }
@@ -197,7 +189,7 @@ void liberar_memoria(Map *grafo_juegos)
     {
         Videojuego *juego = (Videojuego *)pair->value;
 
-        list_clean(juego->etiquetas);
+        list_clean(juego->categorias);
 
         Arista *arista = list_first(juego->juegos_similares);
         while(arista != NULL) 
