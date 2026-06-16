@@ -50,6 +50,7 @@ int main()
 {
     char opcion;
     int contador_carga = 0;
+    char opcion_wishlist;
 
     // Clave: ID - Valor: Struct Videojuego
     Map *grafo_juegos = map_create(is_equal_str);
@@ -62,10 +63,51 @@ int main()
         scanf(" %c", &opcion);
         switch (opcion)
         {
-        case '1':
+        case '1': // INICIAR SESION
+            iniciar_sesion(); 
             presioneTeclaParaContinuar();
             break;
-        case '2': // SALIR
+        case '2': // BUSCAR JUEGO
+            buscar_juego();
+            presioneTeclaParaContinuar();
+            break;
+        case '3': // RECOMENDAR JUEGOS
+            recomendaciones();
+            presioneTeclaParaContinuar();
+            break;
+        case '4': // WISHLIST
+            do{
+                mostrar_menu_wishlist();
+                printf("Ingrese su opcion: ");
+                scanf(" %c", &opcion_wishlist);
+                switch (opcion_wishlist)
+                {
+                case '1':
+                    agregar_juego_wishlist();
+                    presioneTeclaParaContinuar();
+                    break;
+                case '2':
+                    eliminar_juego_wishlist();
+                    presioneTeclaParaContinuar();
+                    break;
+                case '3':
+                    mostrar_wishlist();
+                    presioneTeclaParaContinuar();
+                    break;
+                case '4':
+                    break;
+                default:
+                    puts("=== Opcion no valida. Por favor, intente de nuevo ===");
+                    presioneTeclaParaContinuar();
+                    break;
+                }
+            } while (opcion_wishlist != '4');
+            break;
+        case '5': // DESHACER ULTIMA ACCION
+            deshacer_ultima_accion();
+            presioneTeclaParaContinuar();
+            break;
+        case '6': // SALIR
             presioneTeclaParaContinuar();
             break;
         default:
@@ -73,7 +115,7 @@ int main()
             presioneTeclaParaContinuar();
             break;
         }
-    } while (opcion != '2');
+    } while (opcion != '6');
 
     liberar_memoria(grafo_juegos);
     puts("=== CERRANDO PROGRAMA ===");
@@ -106,9 +148,24 @@ void mostrar_menu_principal()
     puts("========================================");
     puts("           Another Game?");
     puts("========================================");
-    puts("1)");
-    puts("2) Salir");
+    puts("1) Iniciar sesión");
+    puts("2) Buscar juego");
+    puts("3) Recomendar juegos");
+    puts("4) Wishlist");
+    puts("5) Deshacer última acción");
+    puts("6) Salir");
     puts("========================================");
+}
+
+void mostrar_menu_wishlist()
+{
+  puts("========================================");
+  puts("     Mi Wishlist");
+  puts("========================================");
+  puts("1) Agregar Juego");
+  puts("2) Eliminar Juego");
+  puts("3) Mostrar Wishlist");
+  puts("4) Volver");
 }
 
 void mostrar_juego(Videojuego *juego)
