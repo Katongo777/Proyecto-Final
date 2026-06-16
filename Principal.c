@@ -41,6 +41,12 @@ char * capitalizar(char *);
 void mostrar_menu_principal();
 void mostrar_juego(Videojuego *);
 void mostrar_lista_juegos(List *);
+
+void recomendar_por_juego(Map *);
+void recomendar_por_filtro(Map *);
+
+void generar_conexiones(Map *);
+int calcular_peso(Videojuego *, Videojuego *);
 void cargar_juegos(Map *);
 void liberar_memoria(Map *);
 // PROTOTIPOS =======================================
@@ -55,6 +61,7 @@ int main()
     // Clave: ID - Valor: Struct Videojuego
     Map *grafo_juegos = map_create(is_equal_str);
     cargar_juegos(grafo_juegos);
+    generar_conexiones(grafo_juegos);
 
     do
     {
@@ -72,7 +79,8 @@ int main()
             presioneTeclaParaContinuar();
             break;
         case '3': // RECOMENDAR JUEGOS
-            recomendaciones();
+            recomendar_por_juego(grafo_juegos);
+            recomendar_por_filtro(grafo_juegos);
             presioneTeclaParaContinuar();
             break;
         case '4': // WISHLIST
@@ -159,13 +167,13 @@ void mostrar_menu_principal()
 
 void mostrar_menu_wishlist()
 {
-  puts("========================================");
-  puts("     Mi Wishlist");
-  puts("========================================");
-  puts("1) Agregar Juego");
-  puts("2) Eliminar Juego");
-  puts("3) Mostrar Wishlist");
-  puts("4) Volver");
+    puts("========================================");
+    puts("     Mi Wishlist");
+    puts("========================================");
+    puts("1) Agregar Juego");
+    puts("2) Eliminar Juego");
+    puts("3) Mostrar Wishlist");
+    puts("4) Volver");
 }
 
 void mostrar_juego(Videojuego *juego)
@@ -262,4 +270,25 @@ void liberar_memoria(Map *grafo_juegos)
 
     map_clean(grafo_juegos);
 }
+
+void generar_conexiones(Map *grafo_juegos)
+{
+    
+}
+
+int calcular_peso(Videojuego *juego1, Videojuego *juego2)
+{
+
+}
+
+void recomendar_por_juego(Map *grafo_juegos)
+{
+
+}
+
+void recomendar_por_filtro(Map *grafo_juegos)
+{
+
+}
+
 // FUNCIONES =======================================
