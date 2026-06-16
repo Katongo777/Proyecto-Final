@@ -24,7 +24,7 @@ typedef struct
     char fecha_lanzamiento[50];
 
     // Lista de Adyacencia
-    List *juegos_similares; // Guardará elementos de tipo 'Arista'
+    List *juegos_similares; // Guardará elementos de tipo 'Conexion'
 } Videojuego;
 
 // Estructura para las conexiones del grafo
@@ -32,7 +32,7 @@ typedef struct
 {
     Videojuego *juego_vecino; // Puntero al nodo conectado
     int peso_similitud;       // Umbral
-} Arista;
+} Conexion;
 // STRUCT =======================================
 
 // PROTOTIPOS =======================================
@@ -256,7 +256,7 @@ void liberar_memoria(Map *grafo_juegos)
 
         list_clean(juego->categorias);
 
-        Arista *arista = list_first(juego->juegos_similares);
+        Conexion *arista = list_first(juego->juegos_similares);
         while(arista != NULL) 
         {
             free(arista);
@@ -273,7 +273,49 @@ void liberar_memoria(Map *grafo_juegos)
 
 void generar_conexiones(Map *grafo_juegos)
 {
-    
+    puts("Se están generando las conexiones, puede demorarse un poco...");
+    int umbral = 10; // Umbral para generar la conexion entre dos juegos
+    int total_juegos = 9451;
+
+    /*
+    El arreglo se crea para no generar una doble conexion, o sea, no se compare
+    un juego con otro que ya se comparo, además nos se ahorra la mitad de iteraciones
+    */
+    int indice = 0;
+    Videojuego **arreglo_juegos = (Videojuego **)malloc(total_juegos * sizeof(Videojuego *));
+    for (MapPair *pair = map_first(grafo_juegos) ; pair != NULL ; pair = map_next(grafo_juegos))
+    {
+        arreglo_juegos[indice] = (Videojuego *)pair->value;
+        indice++;
+    }
+
+    for (int i = 0 ; i < total_juegos ; i++)
+    {
+        for (int j = i + 1 ; j < total_juegos ; j++)
+        {
+            Videojuego *juego_base = arreglo_juegos[i];
+            Videojuego *juego_comp = arreglo_juegos[j]; 
+            int peso = calcular_peso(juego_base, juego_comp);
+            
+            if (peso >= umbral)
+            {
+                // Conexion de juego base ---> juego similar
+                Conexion *conexion_1 = (Conexion *)malloc(sizeof(Conexion));
+                conexion_1->juego_vecino = juego_comp;
+                conexion_1->peso_similitud = peso;
+                list_pushBack(juego_base->juegos_similares, conexion_1);
+                
+                // Conexion de juego similar ---> juego base
+                Conexion *conexion_2 = (Conexion *)malloc(sizeof(Conexion));
+                conexion_2->juego_vecino = juego_base;
+                conexion_2->peso_similitud = peso;
+                list_pushBack(juego_comp->juegos_similares, conexion_2);
+            }
+        }
+    }
+
+    free(arreglo_juegos);
+    puts("Conexiones generadas correctamente");
 }
 
 int calcular_peso(Videojuego *juego1, Videojuego *juego2)
