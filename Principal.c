@@ -1,6 +1,7 @@
 #include "TDAs/extra.h"
 #include "TDAs/list.h"
 #include "TDAs/map.h"
+#include "TDAs/set.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -12,16 +13,18 @@ typedef struct
     char id[50];
     char titulo[150];
     char desarrollador[100];
-    List *categorias; // Lista de strings con los tags
-    float precio;
+    List *categorias_lis;   // Lista de categorías para mostrar
+    Set *categorias_con; // Conjunto de categorías
+    float precio; // USD
     int cantidad_dlc;
     int metacritic;
     int recomendaciones;
-    float puntuacion_popularidad;
-    char nivel_calificacion[50];
-    int es_multijugador;
-    char plataformas[200];
+    float puntuacion_pop;
+    int es_multijugador; // 1 si es multijugador o 0 si no lo es
+    List *plataformas_lis;   // Lista de plataformas para mostrar
+    Set *plataformas_con; // Conjunto de plataformas
     char fecha_lanzamiento[50];
+    int anio;
 
     // Lista de Adyacencia
     List *juegos_similares; // Guardará elementos de tipo 'Conexion'
@@ -41,6 +44,7 @@ char * capitalizar(char *);
 void mostrar_menu_principal();
 void mostrar_juego(Videojuego *);
 void mostrar_lista_juegos(List *);
+void mostrar_menu_wishlist();
 
 void recomendar_por_juego(Map *);
 void recomendar_por_filtro(Map *);
@@ -71,11 +75,11 @@ int main()
         switch (opcion)
         {
         case '1': // INICIAR SESION
-            iniciar_sesion(); 
+            //iniciar_sesion(); 
             presioneTeclaParaContinuar();
             break;
         case '2': // BUSCAR JUEGO
-            buscar_juego();
+            //buscar_juego();
             presioneTeclaParaContinuar();
             break;
         case '3': // RECOMENDAR JUEGOS
@@ -91,15 +95,15 @@ int main()
                 switch (opcion_wishlist)
                 {
                 case '1':
-                    agregar_juego_wishlist();
+                    //agregar_juego_wishlist();
                     presioneTeclaParaContinuar();
                     break;
                 case '2':
-                    eliminar_juego_wishlist();
+                    //eliminar_juego_wishlist();
                     presioneTeclaParaContinuar();
                     break;
                 case '3':
-                    mostrar_wishlist();
+                    //mostrar_wishlist();
                     presioneTeclaParaContinuar();
                     break;
                 case '4':
@@ -112,7 +116,7 @@ int main()
             } while (opcion_wishlist != '4');
             break;
         case '5': // DESHACER ULTIMA ACCION
-            deshacer_ultima_accion();
+            //deshacer_ultima_accion();
             presioneTeclaParaContinuar();
             break;
         case '6': // SALIR
@@ -182,11 +186,11 @@ void mostrar_juego(Videojuego *juego)
     printf("Desarrollador: %s | Precio: $%.2f | Multijugador: %s\n", juego->desarrollador, juego->precio, juego->es_multijugador ? "Si" : "No");
 
     printf("Etiquetas: ");
-    char *tag = list_first(juego->categorias);
+    char *tag = list_first(juego->categorias_lis);
     while (tag != NULL)
     {
         printf("[%s] ", tag);
-        tag = list_next(juego->categorias);
+        tag = list_next(juego->categorias_lis);
     }
     printf("\n----------------------------------------\n");
 }
@@ -203,7 +207,7 @@ void mostrar_lista_juegos(List *lista)
 
 void cargar_juegos(Map *grafo_juegos)
 {
-    FILE *archivo = fopen("dataset_maestro_final.csv", "r");
+    FILE *archivo = fopen("dataset_juegos.csv", "r");
     if (archivo == NULL)
     {
         perror("Error al abrir el archivo dataset_maestro_final.csv");
@@ -223,22 +227,42 @@ void cargar_juegos(Map *grafo_juegos)
         strcpy(juego->titulo, campos[1]);                  // TITULO
         strcpy(juego->desarrollador, campos[2]);           // ESTUDIO
 
-        juego->categorias = split_string(campos[4], ",");  // CATEGORIA
+        juego->categorias_lis = split_string(campos[4], ","); // CATEGORIA (LISTA)
+        juego->categorias_con = set_create(is_equal_str);  // CATEGORIA (CONJUNTO)
+
+        /*
+        Se usa un conjunto para que las búsquedas de coincidencias de categorías sean más
+        eficientes
+        */
+        char *categ = list_first(juego->categorias_lis);
+        while (categ != NULL)
+        {
+            set_insert(juego->categorias_con, categ);
+            categ = list_next(juego->categorias_lis);
+        }
 
         juego->precio = atof(campos[5]);                   // PRECIO
         juego->cantidad_dlc = atoi(campos[6]);             // DLC'S
         juego->metacritic = atoi(campos[7]);               // METACRITIC
         juego->recomendaciones = atoi(campos[8]);          // RECOMENDACIONES
-        juego->puntuacion_popularidad = atof(campos[9]);   // PUNTUACION
-
-        strcpy(juego->nivel_calificacion, campos[10]);     // CALIFICACION (STRING)
-
+        juego->puntuacion_pop = atof(campos[9]);   // PUNTUACION
         juego->es_multijugador = atoi(campos[12]);         // MULTIJUGADOR
-        strcpy(juego->plataformas, campos[13]);            // PLATAFORMAS
 
-        strcpy(juego->fecha_lanzamiento, campos[16]);      // FECHA
+        juego->plataformas_lis = split_string(campos[13], ","); // PLATAFORMAS (LISTA)
+        juego->plataformas_con = set_create(is_equal_str);   // PLATAFORMAS (CONJUNTO)
 
-        juego->juegos_similares = list_create();           // LISTA ADYACENCIA
+        char *plat = list_first(juego->plataformas_lis);
+        while (plat != NULL)
+        {
+            set_insert(juego->plataformas_con, plat);
+            plat = list_next(juego->plataformas_lis);
+        }
+
+        strcpy(juego->fecha_lanzamiento, campos[16]); // FECHA
+        int anio = atoi(juego->fecha_lanzamiento);
+        juego->anio = anio;
+
+        juego->juegos_similares = list_create(); // LISTA ADYACENCIA
 
         map_insert(grafo_juegos, juego->id, juego);
     }
@@ -254,7 +278,13 @@ void liberar_memoria(Map *grafo_juegos)
     {
         Videojuego *juego = (Videojuego *)pair->value;
 
-        list_clean(juego->categorias);
+        // CATEGORIAS
+        list_clean(juego->categorias_lis);
+        set_clean(juego->categorias_con);
+
+        // PLATAFORMAS
+        list_clean(juego->plataformas_lis);
+        set_clean(juego->plataformas_con);
 
         Conexion *arista = list_first(juego->juegos_similares);
         while(arista != NULL) 
@@ -273,8 +303,9 @@ void liberar_memoria(Map *grafo_juegos)
 
 void generar_conexiones(Map *grafo_juegos)
 {
-    puts("Se están generando las conexiones, puede demorarse un poco...");
-    int umbral = 10; // Umbral para generar la conexion entre dos juegos
+    puts("Generando conexiones, puede demorarse un poco...");
+    puts("Mientras ve pensando que juegos vas a querer comparar");
+    int umbral = 40; // Umbral para generar la conexion entre dos juegos
     int total_juegos = 9451;
 
     /*
@@ -291,6 +322,8 @@ void generar_conexiones(Map *grafo_juegos)
 
     for (int i = 0 ; i < total_juegos ; i++)
     {
+        // Se imprime cada 100 juegos
+        if (i % 100 == 0) printf("Estado de carga: %d%%\n", (i * 100) / 9451);
         for (int j = i + 1 ; j < total_juegos ; j++)
         {
             Videojuego *juego_base = arreglo_juegos[i];
@@ -318,9 +351,87 @@ void generar_conexiones(Map *grafo_juegos)
     puts("Conexiones generadas correctamente");
 }
 
-int calcular_peso(Videojuego *juego1, Videojuego *juego2)
+int calcular_peso(Videojuego *juego_1, Videojuego *juego_2)
 {
+    int peso = 0;
 
+    // DESARROLLADOR
+    if (strcmp(juego_1->desarrollador, juego_2->desarrollador) == 0) peso += 5;
+
+    // MULTIJUGADOR
+    if (juego_1->es_multijugador == juego_2->es_multijugador) peso += 2;
+
+    // CATEGORIAS
+    char *categ_1 = list_first(juego_1->categorias_lis);
+    while (categ_1 != NULL)
+    {
+        if (set_search(juego_2->categorias_con, categ_1) != NULL) peso += 3;
+        categ_1 = list_next(juego_1->categorias_lis);
+    }
+    
+    // PRECIO
+    int dif_precio = abs(juego_1->precio - juego_2->precio);
+    if (dif_precio <= 10) peso += 3;
+    
+    // METACRITIC
+    int meta = juego_2->metacritic; 
+    if (meta >= 70)
+    {
+        peso += 2;
+        if (meta >= 80)
+        {
+            peso += 3;
+            if (meta >= 90)
+            {
+                peso += 5;
+            }
+        }
+    }
+
+    // RECOMENDACIONES
+    int recom = juego_2->recomendaciones;
+    if (recom >= 50000)
+    {
+        peso += 2;
+        if (recom >= 300000)
+        {
+            peso += 3;
+            if (recom >= 500000)
+            {
+                peso += 5;
+            }
+        }
+    }
+
+    // POPULARIDAD
+    float punt_pop = juego_2->puntuacion_pop; 
+    if (punt_pop >= 60)
+    {
+        peso += 2;
+        if (punt_pop >= 70)
+        {
+            peso += 3;
+            if (punt_pop >= 90)
+            {
+                peso += 5;
+            }
+        }
+    }
+
+    // PLATAFORMAS
+    char *plat_1 = list_first(juego_1->plataformas_lis);
+    while (plat_1 != NULL)
+    {
+        if (set_search(juego_2->plataformas_con, plat_1) != NULL) peso += 2;
+        plat_1 = list_next(juego_1->plataformas_lis);
+    }
+
+    // AÑO
+    int dif_anio = abs(juego_1->anio - juego_2->anio);
+    if (dif_anio <= 5) peso += 3;
+
+
+    return peso;
 }
 
 void recomendar_por_juego(Map *grafo_juegos)
