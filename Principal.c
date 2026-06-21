@@ -170,13 +170,14 @@ void mostrar_menu_wishlist()
 
 void mostrar_juego(Videojuego *juego)
 {
-    printf("\nTitulo: %s | Metacritic: %d\n", juego->id, juego->titulo, juego->metacritic);
+    printf("\nTitulo: %s | Metacritic: %d\n", juego->titulo, juego->metacritic);
     printf("Desarrollador: %s | Precio: $%.2f | Multijugador: %s\n", juego->desarrollador, juego->precio, juego->es_multijugador ? "Si" : "No");
+    printf("Plataformas: %s | Lanzamiento: %s\n", juego->plataformas, juego->fecha_lanzamiento);
 
+    // Mostrar Etiquetas (Recorriendo la lista de etiquetas/tags)
     printf("Etiquetas: ");
     char *tag = list_first(juego->categorias);
-    while (tag != NULL)
-    {
+    while (tag != NULL) {
         printf("[%s] ", tag);
         tag = list_next(juego->categorias);
     }
