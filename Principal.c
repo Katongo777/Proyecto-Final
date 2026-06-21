@@ -1,10 +1,12 @@
 #include "TDAs/extra.h"
 #include "TDAs/list.h"
 #include "TDAs/map.h"
+#include "TDAs/stack.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+
 
 // STRUCT =======================================
 typedef struct
@@ -33,11 +35,24 @@ typedef struct
     Videojuego *juego_vecino; // Puntero al nodo conectado
     int peso_similitud;       // Umbral
 } Arista;
+
+// ESTRUCTURA PARA USUARIOS (Inicio de Sesión)
+typedef struct {
+    char nombre[50];        // Nombre identico al de ingreso
+    char nombre_llave[50];    // Nombre con formato reestablecido a minusculas (para buscar y guardar)
+    unsigned long clave;    // Hash de la contraseña
+    List *wishlist;         // Guardar juegos deseados
+    Stack *historial;       // Deshacer acciones.
+} Usuario;
 // STRUCT =======================================
 
 // PROTOTIPOS =======================================
 int is_equal_str(void *, void *);
 char * capitalizar(char *);
+void a_minusculas(char *, char *);
+unsigned long hash_clave(const char *);
+Usuario *registrar_usuario(Map *, char *, char*);
+Usuario *iniciar_sesion(Map *);
 void mostrar_menu_principal();
 void mostrar_juego(Videojuego *);
 void mostrar_lista_juegos(List *);
@@ -142,6 +157,88 @@ char * capitalizar(char *palabra)
     return palabra;
 }
 
+// Esta funcion convierte una cadena a minusculas enviando la cadena convertida a otro string sin modificar la original.
+void a_minusculas(char *textoIngresado, char *variableDestino) {
+    int i = 0;
+    while (textoIngresado[i] != '\0') {
+        variableDestino[i] = tolower((unsigned char)textoIngresado[i]);
+        i++;
+    }
+    variableDestino[i] = '\0';
+    return;
+}
+
+// "Encriptar" la clave con una función hash. (En el login solo se compara el resultado de colocar la clave en el hash).
+unsigned long hash_clave(const char *clave) {
+    unsigned long hash = 5381;
+    int c;
+    while ((c = *clave++) != '\0') {
+        hash = hash * 33 + c;
+    }
+    return hash;
+}
+
+Usuario *registrar_usuario(Map *usuarios, char *nombre, char*nombre_llave) {
+    char clave[50];
+
+    printf("Crea una contraseña: ");
+    scanf(" %49[^\n]", clave);
+
+    Usuario *nuevo = (Usuario*) malloc(sizeof(Usuario));
+    if (nuevo == NULL) exit(EXIT_FAILURE);
+
+    strcpy(nuevo->nombre, nombre);                  // Para mostrarlo
+    strcpy(nuevo->nombre_llave, nombre_llave);      // minusculas para busqueda
+    nuevo->clave = hash_clave(clave);               // se guarda la clave encriptada
+    nuevo->wishlist = list_create();
+    nuevo->historial = stack_create(NULL);
+
+    map_insert(usuarios, nuevo->nombre_llave, nuevo);  // la clave del nodo es el nombre formateado
+
+    printf("\nCuenta creada con exito. Bienvenido, %s!\n", nuevo->nombre); 
+    return nuevo;
+}
+
+Usuario *iniciar_sesion(Map *usuarios) {
+    char nombre[50];
+    char nombre_llave[50];
+    char clave[50];
+
+    printf("Ingresa tu nombre de usuario: ");
+    scanf(" %49[^\n]", nombre);
+    a_minusculas(nombre, nombre_llave);
+
+    MapPair *pair = map_search(usuarios, nombre_llave);
+
+    // CASI 1: el usuario ya existe => se pide la clave y se comparan los resultados de la función hash
+    if (pair != NULL) {
+        Usuario *usuario = (Usuario*)pair->value;
+
+        for (int intentos = 3; intentos > 0; intentos--) {
+            printf("Contraseña: ");
+            scanf(" %49[^\n]", clave);
+
+            if (hash_clave(clave) == usuario->clave) {
+                printf("\nBienvenido de vuelta, %s!\n", usuario->nombre);
+                return usuario;
+            }
+            if (intentos > 1) {
+                printf("Contraseña incorrecta. Te quedan %d intento(s).\n", intentos - 1);
+            }
+        } 
+        printf("Has excedido el número de intentos.\n");
+        return NULL;
+    }
+
+    // CASO 2: no existe => registrar usuario
+    char opcion;
+    printf("\nEl usuario '%s' no existe. Crear cuenta? (1 = Si): ", nombre);
+    scanf(" %c", &opcion);
+    if (opcion != '1') return NULL;
+
+    return registrar_usuario(usuarios, nombre, nombre_llave);
+}
+
 void mostrar_menu_principal()
 {
     limpiarPantalla();
@@ -182,6 +279,7 @@ void mostrar_juego(Videojuego *juego)
         tag = list_next(juego->categorias);
     }
     printf("\n----------------------------------------\n");
+    return;
 }
 
 void mostrar_lista_juegos(List *lista)
