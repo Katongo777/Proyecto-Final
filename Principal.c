@@ -57,6 +57,8 @@ typedef struct {
 // STRUCT =======================================
 
 // PROTOTIPOS =======================================
+void guardar_usuarios(Map *);
+void cargar_usuarios(Map *, Map *);
 int is_equal_str(void *, void *);
 char * capitalizar(char *);
 void a_minusculas(char *, char *);
@@ -64,6 +66,7 @@ unsigned long hash_clave(const char *);
 Usuario *registrar_usuario(Map *, char *, char*);
 Usuario *iniciar_sesion(Map *);
 void mostrar_menu_principal();
+void mostrar_menu_wishlist();
 void mostrar_juego(Videojuego *);
 void mostrar_lista_juegos(List *);
 void filtrar_juegos(Map *grafo_juegos);
@@ -84,6 +87,9 @@ int main()
     // Clave: ID - Valor: Struct Videojuego
     Map *grafo_juegos = map_create(is_equal_str);
     cargar_juegos(grafo_juegos);
+    Map *usuarios = map_create(is_equal_str);
+    cargar_usuarios(usuarios, grafo_juegos);
+    Usuario *usuario_activo = NULL;
 
     do
     {
@@ -93,15 +99,15 @@ int main()
         switch (opcion)
         {
         case '1': // INICIAR SESION
-            iniciar_sesion(); 
+            usuario_activo = iniciar_sesion(usuarios); 
             presioneTeclaParaContinuar();
             break;
         case '2': // BUSCAR JUEGO
-            buscar_juego();
+            // buscar_juego();
             presioneTeclaParaContinuar();
             break;
         case '3': // RECOMENDAR JUEGOS
-            recomendaciones();
+            // recomendaciones();
             presioneTeclaParaContinuar();
             break;
         case '4': // WISHLIST
@@ -112,15 +118,15 @@ int main()
                 switch (opcion_wishlist)
                 {
                 case '1':
-                    agregar_juego_wishlist();
+                    // agregar_juego_wishlist();
                     presioneTeclaParaContinuar();
                     break;
                 case '2':
-                    eliminar_juego_wishlist();
+                    // eliminar_juego_wishlist();
                     presioneTeclaParaContinuar();
                     break;
                 case '3':
-                    mostrar_wishlist();
+                    // mostrar_wishlist();
                     presioneTeclaParaContinuar();
                     break;
                 case '4':
@@ -133,7 +139,7 @@ int main()
             } while (opcion_wishlist != '4');
             break;
         case '5': // DESHACER ULTIMA ACCION
-            deshacer_ultima_accion();
+            // deshacer_ultima_accion();
             presioneTeclaParaContinuar();
             break;
         case '6': // SALIR
@@ -153,6 +159,61 @@ int main()
 // MAIN =======================================
 
 // FUNCIONES =======================================
+
+// Guarda todos los usuarios en un csv: "usuarios.csv".
+void guardar_usuarios(Map *usuarios) {
+    FILE *archivo = fopen("usuarios.csv", "w");
+    if (archivo == NULL) {
+        printf("No se pudo abrir usuarios.csv para guardar.\n");
+        return;
+    }
+
+    // Columnas de los datos
+    fprintf(archivo, "nombre;clave;wishlist\n");
+
+    // Se recorre el mapa de usuarios guardando los datos de cada uno
+    MapPair *pair = map_first(usuarios);
+    while (pair != NULL) {
+        Usuario *usuario = (Usuario *)pair->value;
+        fprintf(archivo, "%s;%lu", usuario->nombre, usuario->clave);
+        
+        Videojuego *juego = list_first(usuario->wishlist);
+        while (juego != NULL) {
+            fprintf(archivo, ";%s", juego->titulo);
+            juego = list_next(usuario->wishlist);
+        }
+
+        fprintf(archivo, "\n");
+        pair = map_next(usuarios);
+    }
+    fclose(archivo);
+}
+
+void cargar_usuarios(Map *usuarios, Map *grafo_juegos) {
+    FILE *archivo = fopen("usuarios.csv", "r");
+    if (archivo == NULL) return; 
+
+    char **campos = leer_linea_csv(archivo, ';');
+    while ((campos = leer_linea_csv(archivo, ';')) != NULL) {
+        Usuario *nuevo = (Usuario *)malloc(sizeof(Usuario));
+        if (nuevo == NULL) exit(EXIT_FAILURE);
+
+        strcpy(nuevo->nombre, campos[0]);
+        a_minusculas(campos[0], nuevo->nombre_llave);
+        nuevo->clave = strtoul(campos[1], NULL, 10);
+        nuevo->wishlist = list_create();
+        nuevo->historial = stack_create(NULL);
+
+        // Los juegos de la wishlist son del 2 en adelate
+        for (int i = 2; campos[i] != NULL; i++) {
+            MapPair *pair = map_search(grafo_juegos, campos[i]);
+            if (pair != NULL) list_pushBack(nuevo->wishlist, pair->value);
+        }
+        map_insert(usuarios, nuevo->nombre_llave, nuevo);
+    }
+    fclose(archivo);
+}
+
 int is_equal_str(void *key1, void *key2)
 {
     return strcmp((char *)key1, (char *)key2) == 0;
@@ -492,7 +553,7 @@ void cargar_juegos(Map *grafo_juegos)
 
         juego->juegos_similares = list_create();           // LISTA ADYACENCIA
 
-        map_insert(grafo_juegos, juego->id, juego);
+        map_insert(grafo_juegos, juego->titulo, juego);
     }
 
     fclose(archivo);
