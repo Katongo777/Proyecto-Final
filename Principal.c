@@ -44,6 +44,16 @@ typedef struct {
     List *wishlist;         // Guardar juegos deseados
     Stack *historial;       // Deshacer acciones.
 } Usuario;
+
+// ESTRUCTURA PARA FILTROS
+typedef struct {
+    List *categorias; // Lista de strings con los tags
+    char desarrollador[100];
+    float precio_max;
+    int metacritic_min;
+    int multijugador; // 1 = Si, 0 = No, -1 = No filtrar
+    char plataforma[100];
+} Filtro;
 // STRUCT =======================================
 
 // PROTOTIPOS =======================================
@@ -56,6 +66,10 @@ Usuario *iniciar_sesion(Map *);
 void mostrar_menu_principal();
 void mostrar_juego(Videojuego *);
 void mostrar_lista_juegos(List *);
+void filtrar_juegos(Map *grafo_juegos);
+int cumple_filtros(Videojuego *juego, Filtro *filtro);
+int cumple_categorias(Videojuego *juego, List *categorias);
+void mostrar_menu_filtro();
 void cargar_juegos(Map *);
 void liberar_memoria(Map *);
 // PROTOTIPOS =======================================
@@ -252,6 +266,153 @@ void mostrar_menu_principal()
     puts("5) Deshacer última acción");
     puts("6) Salir");
     puts("========================================");
+}
+void mostrar_menu_filtro(){
+    limpiarPantalla();
+    puts("\n=== Filtrar Juegos ===");
+    puts("1) Agregar categoría");
+    puts("2) Establecer desarrollador");
+    puts("3) Establecer precio máximo");
+    puts("4) Establecer metacritic mínimo");
+    puts("5) Establecer multijugador (1 = Sí, 0 = No)");
+    puts("6) Establecer plataforma");
+    puts("7) Filtrar y mostrar resultados");
+    puts("8) Limpiar filtros");
+    puts("9) Volver");
+}
+
+
+int cumple_categorias(Videojuego *juego, List *categorias) {
+    char *categoria_filtro = list_first(categorias);
+    while (categoria_filtro != NULL) {
+        int encontrado = 0;
+        char *categoria_juego = list_first(juego->categorias);
+        while (categoria_juego != NULL) {
+            if (strcmp(categoria_filtro, categoria_juego) == 0) {
+                encontrado = 1;
+                break;
+            }
+            categoria_juego = list_next(juego->categorias);
+        }
+        if (!encontrado) return 0; // Si alguna categoría no coincide, no cumple
+        categoria_filtro = list_next(categorias);
+    }
+    return 1; // Todas las categorías coinciden
+}
+
+int cumple_filtros(Videojuego *juego, Filtro *filtro){
+    if(filtro->categorias != NULL && list_size(filtro->categorias) > 0){
+        if(!cumple_categorias(juego, filtro->categorias)) return 0;
+    }
+    if(strlen(filtro->desarrollador) > 0){
+        if(strcmp(juego->desarrollador, filtro->desarrollador) != 0) return 0;
+    }
+    if(filtro->precio_max != -1){
+        if(juego->precio > filtro->precio_max) return 0;
+    }
+    if(filtro->metacritic_min != -1){
+        if(juego->metacritic < filtro->metacritic_min) return 0;
+    }
+    if(filtro->multijugador != -1){
+        if(juego->es_multijugador != filtro->multijugador) return 0;
+    }
+    if(strlen(filtro->plataforma) > 0){
+        if(strstr(juego->plataformas, filtro->plataforma) == NULL) return 0;
+    }
+    return 1;
+
+}
+
+void filtrar_juegos(Map *grafo_juegos)
+{
+    Filtro filtro;
+    filtro.categorias = list_create();
+    strcpy(filtro.desarrollador, ""); // No filtrar por desarrollador por defecto
+    strcpy(filtro.plataforma, ""); // No filtrar por plataforma por defecto
+    filtro.precio_max = -1; // No filtrar por precio por defecto
+    filtro.metacritic_min = -1; // No filtrar por metacritic por defecto
+    filtro.multijugador = -1; // No filtrar por multijugador por defecto
+
+    char opcion;
+    do {
+        mostrar_menu_filtro();
+        printf("Ingrese su opcion: ");
+        scanf(" %c", &opcion);
+        switch (opcion) {
+            case '1':
+            {
+                char categoria[100];
+                printf("Ingrese la categoría a agregar: ");
+                scanf(" %99[^\n]", categoria);
+                char *nueva = malloc(strlen(categoria) + 1);
+                strcpy(nueva, categoria);
+                list_pushBack(filtro.categorias, nueva);
+                break;
+            }
+            case '2':
+                printf("Ingrese el desarrollador: ");
+                scanf(" %99[^\n]", filtro.desarrollador);
+                break;  
+            case '3':
+                printf("Ingrese el precio máximo: ");
+                scanf("%f", &filtro.precio_max);
+                break;
+            case '4':
+                printf("Ingrese el metacritic mínimo: ");
+                scanf("%d", &filtro.metacritic_min);
+                break;
+            case '5':
+                printf("Ingrese 1 para Sí, 0 para No: ");
+                scanf("%d", &filtro.multijugador);
+                break;
+            case '6':
+                printf("Ingrese la plataforma: ");
+                scanf(" %99[^\n]", filtro.plataforma);
+                break;
+            case '7':
+                //Aqui se aplican filtros
+                int encontrados = 0;
+
+                MapPair *pair = map_first(grafo_juegos);
+
+                while (pair != NULL) {
+                    Videojuego *juego = (Videojuego *)pair->value;
+                    if (cumple_filtros(juego, &filtro)) {
+                        mostrar_juego(juego);
+                        encontrados++;
+                    }
+                    pair = map_next(grafo_juegos);
+                }
+                printf("Se encontraron %d juegos que cumplen con los filtros.\n", encontrados);
+                presioneTeclaParaContinuar();
+                break;
+            case '8':
+                char *cat = list_first(filtro.categorias);
+
+                while (cat != NULL) {
+                    free(cat);
+                    cat = list_next(filtro.categorias);
+                } 
+                list_clean(filtro.categorias);
+                strcpy(filtro.desarrollador, "");
+                strcpy(filtro.plataforma, "");
+                filtro.precio_max = -1;
+                filtro.metacritic_min = -1;
+                filtro.multijugador = -1;
+                break;
+            case '9':
+                char *cat = list_first(filtro.categorias);
+
+                while(cat != NULL)
+                {
+                    free(cat);
+                    cat = list_next(filtro.categorias); 
+                }
+
+                list_clean(filtro.categorias);
+                break;
+        }
+    } while (opcion != '9');
 }
 
 void mostrar_menu_wishlist()
