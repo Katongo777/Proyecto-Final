@@ -26,7 +26,7 @@ typedef struct
     int anio;
 
     // Lista de Adyacencia
-    List *juegos_similares; // Guardará elementos de tipo 'Conexion'
+    List *juegos_similares; // Guardará elementos de tipo 'Arista'
 } Videojuego;
 
 // Estructura para las conexiones del grafo
@@ -34,7 +34,7 @@ typedef struct
 {
     Videojuego *juego_vecino; // Puntero al nodo conectado
     int peso_similitud;       // Umbral
-} Conexion;
+} Arista;
 // STRUCT =======================================
 
 // PROTOTIPOS =======================================
