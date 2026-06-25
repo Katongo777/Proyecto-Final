@@ -109,14 +109,14 @@ void generar_conexiones(Map *grafo_juegos)
             
             if (peso >= umbral)
             {
-                // Conexion de juego base ---> juego similar
-                Conexion *conexion_1 = (Conexion *)malloc(sizeof(Conexion));
+                // Arista de juego base ---> juego similar
+                Arista *conexion_1 = (Arista *)malloc(sizeof(Arista));
                 conexion_1->juego_vecino = juego_comp;
                 conexion_1->peso_similitud = peso;
                 list_pushBack(juego_base->juegos_similares, conexion_1);
                 
-                // Conexion de juego similar ---> juego base
-                Conexion *conexion_2 = (Conexion *)malloc(sizeof(Conexion));
+                // Arista de juego similar ---> juego base
+                Arista *conexion_2 = (Arista *)malloc(sizeof(Arista));
                 conexion_2->juego_vecino = juego_base;
                 conexion_2->peso_similitud = peso;
                 list_pushBack(juego_comp->juegos_similares, conexion_2);
@@ -142,7 +142,7 @@ void guardar_conexiones_archivo(Map *grafo_juegos)
     while (pair != NULL)
     {
         Videojuego *juego = (Videojuego *)pair->value;
-        Conexion *conexion = list_first(juego->juegos_similares);
+        Arista *conexion = list_first(juego->juegos_similares);
         while (conexion != NULL)
         {
             /* 
@@ -187,13 +187,13 @@ int cargar_conexiones_archivo(Map *grafo_juegos)
                 Videojuego *juego_comp = (Videojuego *)pair_2->value;
 
                 // Conexión J1 ---> J2
-                Conexion *conexion_1 = (Conexion *)malloc(sizeof(Conexion));
+                Arista *conexion_1 = (Arista *)malloc(sizeof(Arista));
                 conexion_1->juego_vecino = juego_comp;
                 conexion_1->peso_similitud = peso;
                 list_pushBack(juego_base->juegos_similares, conexion_1);
 
                 // Conexión J2 ---> J1
-                Conexion *conexion_2 = (Conexion *)malloc(sizeof(Conexion));
+                Arista *conexion_2 = (Arista *)malloc(sizeof(Arista));
                 conexion_2->juego_vecino = juego_base;
                 conexion_2->peso_similitud = peso;
                 list_pushBack(juego_comp->juegos_similares, conexion_2);
@@ -304,10 +304,10 @@ void liberar_memoria(Map *grafo_juegos)
         list_clean(juego->plataformas_lis);
         set_clean(juego->plataformas_con);
 
-        Conexion *arista = list_first(juego->juegos_similares);
+        Arista *arista = list_first(juego->juegos_similares);
         while(arista != NULL) 
         {
-            Conexion *ar_borrar = arista;
+            Arista *ar_borrar = arista;
             arista = list_next(juego->juegos_similares);
             free(arista);
         }

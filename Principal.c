@@ -490,52 +490,6 @@ void mostrar_lista_juegos(List *lista)
     }
 }
 
-void cargar_juegos(Map *grafo_juegos)
-{
-    FILE *archivo = fopen("dataset_maestro_final.csv", "r");
-    if (archivo == NULL)
-    {
-        perror("Error al abrir el archivo dataset_maestro_final.csv");
-        return;
-    }
-
-    // Lee los encabezados del CSV
-    char **campos = leer_linea_csv(archivo, ',');
-
-    // Lee cada línea del archivo CSV hasta el final
-    while ((campos = leer_linea_csv(archivo, ',')) != NULL)
-    {
-        Videojuego *juego = (Videojuego *)malloc(sizeof(Videojuego));
-        if (juego == NULL) exit(EXIT_FAILURE);
-
-        strcpy(juego->id, campos[0]);                      // ID
-        strcpy(juego->titulo, campos[1]);                  // TITULO
-        strcpy(juego->desarrollador, campos[2]);           // ESTUDIO
-
-        juego->categorias = split_string(campos[4], ",");  // CATEGORIA
-
-        juego->precio = atof(campos[5]);                   // PRECIO
-        juego->cantidad_dlc = atoi(campos[6]);             // DLC'S
-        juego->metacritic = atoi(campos[7]);               // METACRITIC
-        juego->recomendaciones = atoi(campos[8]);          // RECOMENDACIONES
-        juego->puntuacion_popularidad = atof(campos[9]);   // PUNTUACION
-
-        strcpy(juego->nivel_calificacion, campos[10]);     // CALIFICACION (STRING)
-
-        juego->es_multijugador = atoi(campos[12]);         // MULTIJUGADOR
-        strcpy(juego->plataformas, campos[13]);            // PLATAFORMAS
-
-        strcpy(juego->fecha_lanzamiento, campos[16]);      // FECHA
-
-        juego->juegos_similares = list_create();           // LISTA ADYACENCIA
-
-        map_insert(grafo_juegos, juego->titulo, juego);
-    }
-
-    fclose(archivo);
-    puts("=== Videojuegos cargados correctamente en el Grafo ===");
-}
-
 void buscar_juego(Map *grafo_juegos)
 {
     char titulo[150];
@@ -605,27 +559,4 @@ void agregar_juego_wishlist(Map *grafo_juegos, Map *usuarios, Usuario *usuario_a
     presioneTeclaParaContinuar();
 }
 
-void liberar_memoria(Map *grafo_juegos)
-{
-    MapPair *pair = map_first(grafo_juegos);
-    while (pair != NULL)
-    {
-        Videojuego *juego = (Videojuego *)pair->value;
-
-        list_clean(juego->categorias);
-
-        Arista *arista = list_first(juego->juegos_similares);
-        while(arista != NULL) 
-        {
-            free(arista);
-            arista = list_next(juego->juegos_similares);
-        }
-        list_clean(juego->juegos_similares);
-
-        free(juego);
-        pair = map_next(grafo_juegos);
-    }
-
-    map_clean(grafo_juegos);
-}
 // FUNCIONES =======================================
