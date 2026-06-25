@@ -103,7 +103,7 @@ int main()
             presioneTeclaParaContinuar();
             break;
         case '2': // BUSCAR JUEGO
-            // buscar_juego();
+            buscar_juego(grafo_juegos);
             presioneTeclaParaContinuar();
             break;
         case '3': // RECOMENDAR JUEGOS
@@ -558,6 +558,31 @@ void cargar_juegos(Map *grafo_juegos)
 
     fclose(archivo);
     puts("=== Videojuegos cargados correctamente en el Grafo ===");
+}
+
+void buscar_juego(Map *grafo_juegos)
+{
+    char titulo[150];
+    limpiarPantalla();
+    puts("========================================");
+    puts("           Buscar Juego");
+    puts("========================================");
+    printf("Ingrese el título del juego: ");
+    scanf(" %149[^\n]", titulo);
+    
+    MapPair *pair = map_search(grafo_juegos, titulo);
+
+    if(pair != NULL)
+    {
+        printf("\nNo se encontró ningún juego con el título \"%s\".\n", titulo);
+        presioneTeclaParaContinuar();
+        return;
+    }
+
+    Videojuego *juego = (Videojuego *)pair->value;
+    puts("\n=== Juego Encontrado ===");
+    mostrar_juego(juego);
+    presionateTeclaParaContinuar();
 }
 
 void liberar_memoria(Map *grafo_juegos)
