@@ -118,7 +118,7 @@ int main()
                 switch (opcion_wishlist)
                 {
                 case '1':
-                    // agregar_juego_wishlist();
+                    agregar_juego_wishlist(grafo_juegos, usuarios, usuario_activo);
                     presioneTeclaParaContinuar();
                     break;
                 case '2':
@@ -582,7 +582,51 @@ void buscar_juego(Map *grafo_juegos)
     Videojuego *juego = (Videojuego *)pair->value;
     puts("\n=== Juego Encontrado ===");
     mostrar_juego(juego);
-    presionateTeclaParaContinuar();
+    presioneTeclaParaContinuar();
+}
+
+void agregar_juego_wishlist(Map *grafo_juegos, Map *usuarios, Usuario *usuario_activo)
+{
+    if(usuario_activo == NULL)
+    {
+        puts("Debes iniciar sesión para agregar juegos a tu wishlist.");
+        presioneTeclaParaContinuar();
+        return;
+    }
+
+    char titulo[150];
+    limpiarPantalla();
+    puts("========================================");
+    puts("       Agregar a Wishlist");
+    puts("========================================");
+    printf("Ingrese el título del juego: ");
+    scanf(" %149[^\n]", titulo);
+
+    MapPair *pair = map_search(grafo_juegos, titulo);
+    if(pair == NULL)
+    {
+        printf("\nNo se encontró ningún juego con el título \"%s\".\n", titulo);
+        presioneTeclaParaContinuar();
+        return;
+    }
+
+    Videojuego *juego = (Videojuego *)pair->value;
+    Videojuego *juego_aux = list_first(usuario_activo->wishlist);
+    while(juego_aux != NULL)
+    {
+        if(strcmp(juego_aux->titulo, juego->titulo) == 0)
+        {
+            printf("\n\"%s\" ya está en tu wishlist.\n", juego->titulo);
+            presioneTeclaParaContinuar();
+            return;
+        }
+        juego_aux = list_next(usuario_activo->wishlist);
+    }
+
+    list_pushBack(usuario_activo->wishlist, juego);
+    guardar_usuarios(usuarios);
+    printf("\n\"%s\" agregado a tu wishlist con éxito.\n", juego->titulo);
+    presioneTeclaParaContinuar();
 }
 
 void liberar_memoria(Map *grafo_juegos)
