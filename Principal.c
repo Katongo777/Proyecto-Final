@@ -84,7 +84,7 @@ int main()
             presioneTeclaParaContinuar();
             break;
         case '2': // BUSCAR JUEGO
-            // buscar_juego();
+            buscar_juego(grafo_juegos);
             presioneTeclaParaContinuar();
             break;
         case '3': // RECOMENDAR JUEGOS
@@ -99,7 +99,7 @@ int main()
                 switch (opcion_wishlist)
                 {
                 case '1':
-                    // agregar_juego_wishlist();
+                    agregar_juego_wishlist(grafo_juegos, usuarios, usuario_activo);
                     presioneTeclaParaContinuar();
                     break;
                 case '2':
@@ -488,5 +488,144 @@ void mostrar_lista_juegos(List *lista)
         mostrar_juego(juego);
         juego = list_next(lista);
     }
+}
+
+void cargar_juegos(Map *grafo_juegos)
+{
+    FILE *archivo = fopen("dataset_maestro_final.csv", "r");
+    if (archivo == NULL)
+    {
+        perror("Error al abrir el archivo dataset_maestro_final.csv");
+        return;
+    }
+
+    // Lee los encabezados del CSV
+    char **campos = leer_linea_csv(archivo, ',');
+
+    // Lee cada línea del archivo CSV hasta el final
+    while ((campos = leer_linea_csv(archivo, ',')) != NULL)
+    {
+        Videojuego *juego = (Videojuego *)malloc(sizeof(Videojuego));
+        if (juego == NULL) exit(EXIT_FAILURE);
+
+        strcpy(juego->id, campos[0]);                      // ID
+        strcpy(juego->titulo, campos[1]);                  // TITULO
+        strcpy(juego->desarrollador, campos[2]);           // ESTUDIO
+
+        juego->categorias = split_string(campos[4], ",");  // CATEGORIA
+
+        juego->precio = atof(campos[5]);                   // PRECIO
+        juego->cantidad_dlc = atoi(campos[6]);             // DLC'S
+        juego->metacritic = atoi(campos[7]);               // METACRITIC
+        juego->recomendaciones = atoi(campos[8]);          // RECOMENDACIONES
+        juego->puntuacion_popularidad = atof(campos[9]);   // PUNTUACION
+
+        strcpy(juego->nivel_calificacion, campos[10]);     // CALIFICACION (STRING)
+
+        juego->es_multijugador = atoi(campos[12]);         // MULTIJUGADOR
+        strcpy(juego->plataformas, campos[13]);            // PLATAFORMAS
+
+        strcpy(juego->fecha_lanzamiento, campos[16]);      // FECHA
+
+        juego->juegos_similares = list_create();           // LISTA ADYACENCIA
+
+        map_insert(grafo_juegos, juego->titulo, juego);
+    }
+
+    fclose(archivo);
+    puts("=== Videojuegos cargados correctamente en el Grafo ===");
+}
+
+void buscar_juego(Map *grafo_juegos)
+{
+    char titulo[150];
+    limpiarPantalla();
+    puts("========================================");
+    puts("           Buscar Juego");
+    puts("========================================");
+    printf("Ingrese el título del juego: ");
+    scanf(" %149[^\n]", titulo);
+    
+    MapPair *pair = map_search(grafo_juegos, titulo);
+
+    if(pair != NULL)
+    {
+        printf("\nNo se encontró ningún juego con el título \"%s\".\n", titulo);
+        presioneTeclaParaContinuar();
+        return;
+    }
+
+    Videojuego *juego = (Videojuego *)pair->value;
+    puts("\n=== Juego Encontrado ===");
+    mostrar_juego(juego);
+    presioneTeclaParaContinuar();
+}
+
+void agregar_juego_wishlist(Map *grafo_juegos, Map *usuarios, Usuario *usuario_activo)
+{
+    if(usuario_activo == NULL)
+    {
+        puts("Debes iniciar sesión para agregar juegos a tu wishlist.");
+        presioneTeclaParaContinuar();
+        return;
+    }
+
+    char titulo[150];
+    limpiarPantalla();
+    puts("========================================");
+    puts("       Agregar a Wishlist");
+    puts("========================================");
+    printf("Ingrese el título del juego: ");
+    scanf(" %149[^\n]", titulo);
+
+    MapPair *pair = map_search(grafo_juegos, titulo);
+    if(pair == NULL)
+    {
+        printf("\nNo se encontró ningún juego con el título \"%s\".\n", titulo);
+        presioneTeclaParaContinuar();
+        return;
+    }
+
+    Videojuego *juego = (Videojuego *)pair->value;
+    Videojuego *juego_aux = list_first(usuario_activo->wishlist);
+    while(juego_aux != NULL)
+    {
+        if(strcmp(juego_aux->titulo, juego->titulo) == 0)
+        {
+            printf("\n\"%s\" ya está en tu wishlist.\n", juego->titulo);
+            presioneTeclaParaContinuar();
+            return;
+        }
+        juego_aux = list_next(usuario_activo->wishlist);
+    }
+
+    list_pushBack(usuario_activo->wishlist, juego);
+    guardar_usuarios(usuarios);
+    printf("\n\"%s\" agregado a tu wishlist con éxito.\n", juego->titulo);
+    presioneTeclaParaContinuar();
+}
+
+void liberar_memoria(Map *grafo_juegos)
+{
+    MapPair *pair = map_first(grafo_juegos);
+    while (pair != NULL)
+    {
+        Videojuego *juego = (Videojuego *)pair->value;
+
+        list_clean(juego->categorias);
+
+        Arista *arista = list_first(juego->juegos_similares);
+        while(arista != NULL) 
+        {
+            free(arista);
+            arista = list_next(juego->juegos_similares);
+        }
+        list_clean(juego->juegos_similares);
+
+        free(juego);
+        pair = map_next(grafo_juegos);
+    }
+
+    map_clean(grafo_juegos);
 }
 // FUNCIONES =======================================
