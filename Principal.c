@@ -22,11 +22,11 @@ typedef struct {
 // ESTRUCTURA PARA FILTROS
 typedef struct {
     List *categorias; // Lista de strings con los tags
+    List *plataformas; // Lista de strings con las plataformas
     char desarrollador[100];
     float precio_max;
     int metacritic_min;
     int multijugador; // 1 = Si, 0 = No, -1 = No filtrar
-    char plataforma[100];
 } Filtro;
 // STRUCT =======================================
 
@@ -319,56 +319,95 @@ void mostrar_menu_filtro(){
     puts("9) Volver");
 }
 
-int cumple_categorias(Videojuego *juego, List *categorias) {
-    char *categoria_filtro = list_first(categorias);
-    while (categoria_filtro != NULL) {
-        int encontrado = 0;
-        char *categoria_juego = list_first(juego->categorias_lis);
-        while (categoria_juego != NULL) {
-            if (strcmp(categoria_filtro, categoria_juego) == 0) {
-                encontrado = 1;
-                break;
-            }
-            categoria_juego = list_next(juego->categorias_lis);
-        }
-        if (!encontrado) return 0; // Si alguna categoría no coincide, no cumple
-        categoria_filtro = list_next(categorias);
+int cumple_categorias(Videojuego *juego, List *categoriasFiltro)
+{
+    char *categoria = list_first(categoriasFiltro);
+
+    while (categoria != NULL)
+    {
+        if (set_search(juego->categorias_con, categoria) == NULL)
+            return 0;
+
+        categoria = list_next(categoriasFiltro);
     }
-    return 1; // Todas las categorías coinciden
+
+    return 1;
 }
 
-int cumple_filtros(Videojuego *juego, Filtro *filtro){
-    if(filtro->categorias != NULL && list_size(filtro->categorias) > 0){
-        if(!cumple_categorias(juego, filtro->categorias)) return 0;
-    }
-    if(strlen(filtro->desarrollador) > 0){
-        if(strcmp(juego->desarrollador, filtro->desarrollador) != 0) return 0;
-    }
-    if(filtro->precio_max != -1){
-        if(juego->precio > filtro->precio_max) return 0;
-    }
-    if(filtro->metacritic_min != -1){
-        if(juego->metacritic < filtro->metacritic_min) return 0;
-    }
-    if(filtro->multijugador != -1){
-        if(juego->es_multijugador != filtro->multijugador) return 0;
-    }
-    if(strlen(filtro->plataforma) > 0){
-        if(strstr(juego->plataformas, filtro->plataforma) == NULL) return 0;
-    }
-    return 1;
+int cumple_plataformas(Videojuego *juego, List *plataformasFiltro)
+{
+    char *plataforma = list_first(plataformasFiltro);
 
+    while (plataforma != NULL)
+    {
+        if (set_search(juego->plataformas_con, plataforma) == NULL)
+            return 0;
+
+        plataforma = list_next(plataformasFiltro);
+    }
+
+    return 1;
+}
+
+int cumple_filtros(Videojuego *juego, Filtro *filtro)
+{
+    // Desarrollador
+    if (strlen(filtro->desarrollador) > 0)
+    {
+        if (strcmp(juego->desarrollador, filtro->desarrollador) != 0)
+            return 0;
+    }
+
+    // Precio máximo
+    if (filtro->precio_max != -1)
+    {
+        if (juego->precio > filtro->precio_max)
+            return 0;
+    }
+
+    // Metacritic mínimo
+    if (filtro->metacritic_min != -1)
+    {
+        if (juego->metacritic < filtro->metacritic_min)
+            return 0;
+    }
+
+    // Multijugador
+    if (filtro->multijugador != -1)
+    {
+        if (juego->es_multijugador != filtro->multijugador)
+            return 0;
+    }
+
+    // Categorías
+    if (list_first(filtro->categorias) != NULL)
+    {
+        if (!cumple_categorias(juego, filtro->categorias))
+            return 0;
+    }
+
+    // Plataformas
+    if (list_first(filtro->plataformas) != NULL)
+    {
+        if (!cumple_plataformas(juego, filtro->plataformas))
+            return 0;
+    }
+
+    return 1;
 }
 
 void filtrar_juegos(Map *grafo_juegos)
 {
     Filtro filtro;
+
     filtro.categorias = list_create();
-    strcpy(filtro.desarrollador, ""); // No filtrar por desarrollador por defecto
-    strcpy(filtro.plataforma, ""); // No filtrar por plataforma por defecto
-    filtro.precio_max = -1; // No filtrar por precio por defecto
-    filtro.metacritic_min = -1; // No filtrar por metacritic por defecto
-    filtro.multijugador = -1; // No filtrar por multijugador por defecto
+    filtro.plataformas = list_create();
+
+    strcpy(filtro.desarrollador, "");
+
+    filtro.precio_max = -1;
+    filtro.metacritic_min = -1;
+    filtro.multijugador = -1;
 
     char opcion;
     do {
@@ -379,11 +418,15 @@ void filtrar_juegos(Map *grafo_juegos)
             case '1':
             {
                 char categoria[100];
-                printf("Ingrese la categoría a agregar: ");
+
+                printf("Ingrese la categoría: ");
                 scanf(" %99[^\n]", categoria);
-                char *nueva = malloc(strlen(categoria) + 1);
+
+                char *nueva = (char *)malloc(strlen(categoria) + 1);
                 strcpy(nueva, categoria);
+
                 list_pushBack(filtro.categorias, nueva);
+
                 break;
             }
             case '2':
@@ -403,10 +446,21 @@ void filtrar_juegos(Map *grafo_juegos)
                 scanf("%d", &filtro.multijugador);
                 break;
             case '6':
+            {
+                char plataforma[100];
+
                 printf("Ingrese la plataforma: ");
-                scanf(" %99[^\n]", filtro.plataforma);
+                scanf(" %99[^\n]", plataforma);
+
+                char *nueva = (char *)malloc(strlen(plataforma) + 1);
+                strcpy(nueva, plataforma);
+
+                list_pushBack(filtro.plataformas, nueva);
+
                 break;
+            }
             case '7':
+            {
                 //Aqui se aplican filtros
                 int encontrados = 0;
 
@@ -423,32 +477,63 @@ void filtrar_juegos(Map *grafo_juegos)
                 printf("Se encontraron %d juegos que cumplen con los filtros.\n", encontrados);
                 presioneTeclaParaContinuar();
                 break;
+            }
             case '8':
+            {
                 char *cat = list_first(filtro.categorias);
 
-                while (cat != NULL) {
+                while (cat != NULL)
+                {
                     free(cat);
                     cat = list_next(filtro.categorias);
-                } 
+                }
                 list_clean(filtro.categorias);
+
+                char *plat = list_first(filtro.plataformas);
+
+                while (plat != NULL)
+                {
+                    free(plat);
+                    plat = list_next(filtro.plataformas);
+                }
+        
+
+                list_clean(filtro.plataformas);
+
                 strcpy(filtro.desarrollador, "");
-                strcpy(filtro.plataforma, "");
                 filtro.precio_max = -1;
                 filtro.metacritic_min = -1;
                 filtro.multijugador = -1;
+
+                puts("Filtros limpiados correctamente.");
+
                 break;
+        
+            }
             case '9':
+            {
                 char *cat = list_first(filtro.categorias);
 
-                while(cat != NULL)
+                while (cat != NULL)
                 {
                     free(cat);
-                    cat = list_next(filtro.categorias); 
+                    cat = list_next(filtro.categorias);
+                }
+                list_clean(filtro.categorias);
+
+                char *plat = list_first(filtro.plataformas);
+
+                while (plat != NULL)
+                {
+                    free(plat);
+                    plat = list_next(filtro.plataformas);
                 }
 
-                list_clean(filtro.categorias);
+                list_clean(filtro.plataformas);
+
                 break;
-        }
+            }
+        }    
     } while (opcion != '9');
 }
 
