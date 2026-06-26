@@ -8,6 +8,7 @@
 #include <string.h>
 #include <ctype.h>
 #include "grafo.h"
+#define ANCHO_CAJA 58
 
 // STRUCT =======================================
 // ESTRUCTURA PARA USUARIOS (Inicio de Sesión)
@@ -31,6 +32,10 @@ typedef struct {
 // STRUCT =======================================
 
 // PROTOTIPOS =======================================
+void linea_borde();
+void linea_vacia();
+void linea_texto(char *);
+void linea_centrada(char *);
 void guardar_usuarios(Map *);
 void cargar_usuarios(Map *, Map *);
 char * capitalizar(char *);
@@ -145,6 +150,65 @@ int main()
 // MAIN =======================================
 
 // FUNCIONES =======================================
+
+// --- PRINTEO DE CAJAS ---
+
+// Parte de arriba
+void linea_borde() {
+    printf("+");
+    for (int i = 0; i < ANCHO_CAJA; i++) printf("=");
+    printf("+\n");
+}
+
+// Linea interna
+void linea_vacia() {
+    printf("|");
+    for (int i = 0; i < ANCHO_CAJA; i++) printf(" ");
+    printf("|\n");
+}
+
+// Texto alineado a la izquierda. Si no cabe se corta y termina en "..."
+void linea_texto(char *texto) {
+    char buffer[ANCHO_CAJA + 1];
+    int margen = 2;
+    int disponible = ANCHO_CAJA - margen;
+    int largo = strlen(texto);
+
+    for(int i = 0; i < margen; i++) buffer[i] = ' ';
+    if (largo <= disponible) {
+        for (int i = 0; i < largo; i++) buffer[margen + i] = texto[i];
+        for (int i = margen + largo; i < ANCHO_CAJA; i++) buffer[i] = ' ';
+    }
+    else {
+        int corte = disponible -3;
+        for(int i = 0; i < corte; i++) buffer[margen + i] = texto[i];
+        buffer[margen + corte] = '.';
+        buffer[margen + corte + 1] = '.';
+        buffer[margen + corte + 2] = '.';
+    }
+
+    buffer[ANCHO_CAJA] = '\0';
+    printf("|%s|\n", buffer);
+}
+
+// Centrado
+
+void linea_centrada(char *texto) {
+    char buffer[ANCHO_CAJA + 1];
+    int largo = strlen(texto);
+    if (largo > ANCHO_CAJA) largo = ANCHO_CAJA;
+    int izquierda = (ANCHO_CAJA - largo) / 2;
+    int derecha = ANCHO_CAJA - largo - izquierda;
+    int p = 0;
+    for (int i = 0; i < izquierda; i++) buffer[p++] = ' ';
+    for (int i = 0; i < largo; i++) buffer[p++] = texto[i];
+    for (int i = 0; i < derecha; i++) buffer[p++] = ' ';
+
+    buffer[ANCHO_CAJA] = '\0';
+    printf("|%s|\n", buffer);
+}
+
+// --- PRINTEO DE CAJAS ---
 
 // Guarda todos los usuarios en un csv: "usuarios.csv".
 void guardar_usuarios(Map *usuarios) {
