@@ -29,6 +29,12 @@ typedef struct {
     int metacritic_min;
     int multijugador; // 1 = Si, 0 = No, -1 = No filtrar
 } Filtro;
+
+// ESTRUCTURA PARA GUARDAR HISTORIAL DE ACCIONES
+typedef struct {
+    char accion[10]; // accion de agregar o eliminar
+    Videojuego *juego; // puntero al juego agregado o eliminado
+} Accion;
 // STRUCT =======================================
 
 // PROTOTIPOS =======================================
@@ -49,6 +55,9 @@ int cumple_categorias(Videojuego *, List *);
 void vaciar_lista_filtro(List *);
 void buscar_juego(Map *);
 void agregar_juego_wishlist(Map *, Map *, Usuario *);
+void eliminar_juego_wishlist(Map *, Usuario *);
+void mostrar_wishlist(Usuario *);
+void deshacer_ultima_accion(Map *, Usuario *);
 // PROTOTIPOS =======================================
 
 // MAIN =======================================
@@ -125,7 +134,7 @@ int main()
                     agregar_juego_wishlist(grafo_juegos, usuarios, usuario_activo);
                     break;
                 case '3': // ELIMINAR JUEGO
-                    presioneTeclaParaContinuar();
+                    eliminar_juego_wishlist(usuarios, usuario_activo);
                     break;
                 case '4':
                     break;
@@ -138,6 +147,7 @@ int main()
             break;
 
         case '6': // DESHACER ULTIMA ACCION
+            deshacer_ultima_accion(usuarios, usuario_activo);
             presioneTeclaParaContinuar();
             break;
 
@@ -605,9 +615,120 @@ void agregar_juego_wishlist(Map *grafo_juegos, Map *usuarios, Usuario *usuario_a
         juego_aux = list_next(usuario_activo->wishlist);
     }
 
-    list_pushBack(usuario_activo->wishlist, juego);
+    list_pushBack(usuario_activo->wishlist, juego); // Agregar el juego a la wishlist
+    Accion *accion = malloc(sizeof(Accion));
+    strcpy(accion->accion, "AGREGAR");
+    accion->juego = juego;
+    stack_push(usuario_activo->historial, accion);
     guardar_usuarios(usuarios);
     printf("\n\"%s\" agregado a tu wishlist con exito.\n", juego->titulo);
+    presioneTeclaParaContinuar();
+}
+
+void eliminar_juego_wishlist(Map *usuarios, Usuario *usuario_activo)
+{
+    if(usuario_activo == NULL) //verificar el inicio de sesion
+    {
+        puts("Debes iniciar sesión para eliminar juegos de tu wishlist.");
+        presioneTeclaParaContinuar();
+        return;
+    }
+    if (list_size(usuario_activo->wishlist) == 0) //verificar si la wishlist esta vacia
+    {
+        puts("Tu wishlist está vacía.");
+        presioneTeclaParaContinuar();
+        return;
+    }
+    char titulo[150];
+    limpiarPantalla();
+    printf("Ingrese el título del juego: ");
+    scanf(" %149[^\n]", titulo);
+
+    Videojuego *juego = list_first(usuario_activo->wishlist);
+    while(juego != NULL) 
+    {
+        if(strcmp(juego->titulo, titulo) == 0)//verificar si el juego esta en la wishlist
+        {
+            list_popCurrent(usuario_activo->wishlist); //se elimina el juego de la wishlist
+            Accion *accion = malloc(sizeof(Accion));
+            strcpy(accion->accion, "ELIMINAR");
+            accion->juego = juego;
+            stack_push(usuario_activo->historial, accion);
+            guardar_usuarios(usuarios);
+            printf("\n\"%s\" eliminado de tu wishlist con éxito.\n", titulo);
+            presioneTeclaParaContinuar();
+            return;
+        }
+        juego = list_next(usuario_activo->wishlist);
+    }
+    printf("\nNo se encontró \"%s\" en tu wishlist.\n", titulo);
+    presioneTeclaParaContinuar();
+}
+
+void mostrar_wishlist(Usuario *usuario_activo)
+{
+    if (usuario_activo == NULL)
+    {
+        puts("Debes iniciar sesión para ver tu wishlist.");
+        presioneTeclaParaContinuar();
+        return;
+    }
+
+    limpiarPantalla();
+    puts("========================================");
+    puts("           Mi Wishlist");
+    puts("========================================");
+
+    if(list_size(usuario_activo->wishlist) == 0)
+    {
+        puts("Tu wishlist está vacía.");
+        presioneTeclaParaContinuar();
+        return;
+    }
+    mostrar_lista_juegos(usuario_activo->wishlist);
+    presioneTeclaParaContinuar();
+}
+
+void deshacer_ultima_accion(Map *usuarios, Usuario *usuario_activo)
+{
+    if (usuario_activo == NULL) //verificar el inicio de sesion
+    {
+        puts("Debes iniciar sesión para deshacer acciones.");
+        presioneTeclaParaContinuar();
+        return;
+    }
+
+    Accion *ultima_accion = stack_top(usuario_activo->historial); //se obtiene la ultima accion del historial
+    if(ultima_accion == NULL) //verificar si existen acciones 
+    {
+        puts("No hay acciones para deshacer.");
+        presioneTeclaParaContinuar();
+        return;
+    }
+
+    stack_pop(usuario_activo->historial);
+    if(strcmp(ultima_accion->accion, "AGREGAR")== 0) //si la ultima accion fue agregar, se elimina el juego de la wishlist
+    {
+        Videojuego *juego_aux = list_first(usuario_activo->wishlist);
+        while(juego_aux != NULL)
+        {
+            if(strcmp(juego_aux->titulo, ultima_accion->juego->titulo) == 0)
+            {
+                list_popCurrent(usuario_activo->wishlist);
+                break;
+            }
+            juego_aux = list_next(usuario_activo->wishlist);
+        }
+        printf("\nAcción deshecha: \"%s\" se ha eliminado de tu wishlist.\n", ultima_accion->juego->titulo);
+    }
+    else if(strcmp(ultima_accion->accion, "ELIMINAR")== 0)//si la ultima accion fue eliminar, se agrega el juego de vuelta a la wishlist
+    {
+        list_pushBack(usuario_activo->wishlist, ultima_accion->juego);
+        printf("\nAcción deshecha: \"%s\" se ha agregado de nuevo a tu wishlist.\n", ultima_accion->juego->titulo);
+    }
+
+    free(ultima_accion);
+    guardar_usuarios(usuarios);
     presioneTeclaParaContinuar();
 }
 
