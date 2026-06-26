@@ -46,6 +46,7 @@ void mostrar_menu_wishlist();
 void filtrar_juegos(Map *grafo_juegos);
 int cumple_filtros(Videojuego *juego, Filtro *filtro);
 int cumple_categorias(Videojuego *juego, List *categorias);
+void vaciar_lista_filtro(List *lista);
 void mostrar_menu_filtro();
 // PROTOTIPOS =======================================
 
@@ -87,11 +88,15 @@ int main()
             buscar_juego(grafo_juegos);
             presioneTeclaParaContinuar();
             break;
-        case '3': // RECOMENDAR JUEGOS
+        case '3': // FILTRAR JUEGOS
+            filtrar_juegos(grafo_juegos);
+            presioneTeclaParaContinuar();
+            break;
+        case '4': // RECOMENDAR JUEGOS
             // recomendaciones();
             presioneTeclaParaContinuar();
             break;
-        case '4': // WISHLIST
+        case '5': // WISHLIST
             do{
                 mostrar_menu_wishlist();
                 printf("Ingrese su opcion: ");
@@ -119,11 +124,11 @@ int main()
                 }
             } while (opcion_wishlist != '4');
             break;
-        case '5': // DESHACER ULTIMA ACCION
+        case '6': // DESHACER ULTIMA ACCION
             // deshacer_ultima_accion();
             presioneTeclaParaContinuar();
             break;
-        case '6': // SALIR
+        case '7': // SALIR
             presioneTeclaParaContinuar();
             break;
         default:
@@ -131,7 +136,7 @@ int main()
             presioneTeclaParaContinuar();
             break;
         }
-    } while (opcion != '6');
+    } while (opcion != '7');
 
     liberar_memoria(grafo_juegos);
     puts("=== CERRANDO PROGRAMA ===");
@@ -193,6 +198,24 @@ void cargar_usuarios(Map *usuarios, Map *grafo_juegos) {
         map_insert(usuarios, nuevo->nombre_llave, nuevo);
     }
     fclose(archivo);
+}
+
+// Esta función limpia TODO: pasa a minúsculas y elimina espacios y guiones
+void simplificar_texto(char *textoIngresado, char *variableDestino) {
+    int i = 0;
+    int j = 0;
+    while (textoIngresado[i] != '\0') {
+        // Si es un espacio o un guion, lo saltamos
+        if (textoIngresado[i] == ' ' || textoIngresado[i] == '-') {
+            i++;
+            continue;
+        }
+        // Lo demás lo pasamos a minúsculas y lo guardamos
+        variableDestino[j] = tolower((unsigned char)textoIngresado[i]);
+        i++;
+        j++;
+    }
+    variableDestino[j] = '\0'; // Cerramos el string
 }
 
 char * capitalizar(char *palabra)
@@ -296,12 +319,13 @@ void mostrar_menu_principal()
     puts("========================================");
     puts("           Another Game?");
     puts("========================================");
-    puts("1) Iniciar sesión");
+    puts("1) Iniciar sesion");
     puts("2) Buscar juego");
-    puts("3) Recomendar juegos");
-    puts("4) Wishlist");
-    puts("5) Deshacer última acción");
-    puts("6) Salir");
+    puts("3) Filtrar juegos");
+    puts("4) Recomendar juegos");
+    puts("5) Wishlist");
+    puts("6) Deshacer ultima accion");
+    puts("7) Salir");
     puts("========================================");
 }
 
@@ -317,6 +341,15 @@ void mostrar_menu_filtro(){
     puts("7) Filtrar y mostrar resultados");
     puts("8) Limpiar filtros");
     puts("9) Volver");
+}
+
+void vaciar_lista_filtro(List *lista) {
+    char *str = list_first(lista);
+    while (str != NULL) {
+        free(str);
+        str = list_next(lista);
+    }
+    list_clean(lista);
 }
 
 int cumple_categorias(Videojuego *juego, List *categoriasFiltro)
@@ -354,7 +387,9 @@ int cumple_filtros(Videojuego *juego, Filtro *filtro)
     // Desarrollador
     if (strlen(filtro->desarrollador) > 0)
     {
-        if (strcmp(juego->desarrollador, filtro->desarrollador) != 0)
+        char des_juego_limpio[100];
+        simplificar_texto(juego->desarrollador, des_juego_limpio);
+        if (strcmp(des_juego_limpio, filtro->desarrollador) != 0)
             return 0;
     }
 
@@ -418,21 +453,26 @@ void filtrar_juegos(Map *grafo_juegos)
             case '1':
             {
                 char categoria[100];
-
                 printf("Ingrese la categoría: ");
                 scanf(" %99[^\n]", categoria);
 
-                char *nueva = (char *)malloc(strlen(categoria) + 1);
-                strcpy(nueva, categoria);
+                char categoria_limpia[100];
+                simplificar_texto(categoria, categoria_limpia); 
 
+                char *nueva = (char *)malloc(strlen(categoria_limpia) + 1);
+                strcpy(nueva, categoria_limpia);
                 list_pushBack(filtro.categorias, nueva);
-
                 break;
             }
             case '2':
+            {
+                char des[100];
                 printf("Ingrese el desarrollador: ");
-                scanf(" %99[^\n]", filtro.desarrollador);
-                break;  
+                scanf(" %99[^\n]", des);
+                
+                simplificar_texto(des, filtro.desarrollador); // <-- Nuevo
+                break; 
+            }  
             case '3':
                 printf("Ingrese el precio máximo: ");
                 scanf("%f", &filtro.precio_max);
@@ -448,12 +488,15 @@ void filtrar_juegos(Map *grafo_juegos)
             case '6':
             {
                 char plataforma[100];
+                char plataforma_limpia[100];
 
                 printf("Ingrese la plataforma: ");
                 scanf(" %99[^\n]", plataforma);
 
-                char *nueva = (char *)malloc(strlen(plataforma) + 1);
-                strcpy(nueva, plataforma);
+                simplificar_texto(plataforma, plataforma_limpia); // <-- Nuevo
+
+                char *nueva = (char *)malloc(strlen(plataforma_limpia) + 1);
+                strcpy(nueva, plataforma_limpia);
 
                 list_pushBack(filtro.plataformas, nueva);
 
@@ -480,57 +523,20 @@ void filtrar_juegos(Map *grafo_juegos)
             }
             case '8':
             {
-                char *cat = list_first(filtro.categorias);
-
-                while (cat != NULL)
-                {
-                    free(cat);
-                    cat = list_next(filtro.categorias);
-                }
-                list_clean(filtro.categorias);
-
-                char *plat = list_first(filtro.plataformas);
-
-                while (plat != NULL)
-                {
-                    free(plat);
-                    plat = list_next(filtro.plataformas);
-                }
-        
-
-                list_clean(filtro.plataformas);
-
+                vaciar_lista_filtro(filtro.categorias);
+                vaciar_lista_filtro(filtro.plataformas);
                 strcpy(filtro.desarrollador, "");
                 filtro.precio_max = -1;
                 filtro.metacritic_min = -1;
                 filtro.multijugador = -1;
-
                 puts("Filtros limpiados correctamente.");
-
+                presioneTeclaParaContinuar();
                 break;
-        
             }
             case '9':
             {
-                char *cat = list_first(filtro.categorias);
-
-                while (cat != NULL)
-                {
-                    free(cat);
-                    cat = list_next(filtro.categorias);
-                }
-                list_clean(filtro.categorias);
-
-                char *plat = list_first(filtro.plataformas);
-
-                while (plat != NULL)
-                {
-                    free(plat);
-                    plat = list_next(filtro.plataformas);
-                }
-
-                list_clean(filtro.plataformas);
-
+                vaciar_lista_filtro(filtro.categorias);
+                vaciar_lista_filtro(filtro.plataformas);
                 break;
             }
         }    
