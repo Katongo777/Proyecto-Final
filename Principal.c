@@ -46,9 +46,6 @@ void simplificar_texto(char *, char *);
 unsigned long hash_clave(const char *);
 Usuario *registrar_usuario(Map *, char *, char *);
 Usuario *iniciar_sesion(Map *);
-void mostrar_menu_filtro();
-void mostrar_juego(Videojuego *);
-void mostrar_lista_juegos(List *);
 void filtrar_juegos(Map *);
 int cumple_filtros(Videojuego *, Filtro *);
 int cumple_categorias(Videojuego *, List *);
@@ -56,8 +53,8 @@ void vaciar_lista_filtro(List *);
 void buscar_juego(Map *);
 void agregar_juego_wishlist(Map *, Map *, Usuario *);
 void eliminar_juego_wishlist(Map *, Usuario *);
-void mostrar_wishlist(Usuario *);
 void deshacer_ultima_accion(Map *, Usuario *);
+void recomendar_juegos(Map *);
 // PROTOTIPOS =======================================
 
 // MAIN =======================================
@@ -104,6 +101,7 @@ int main()
             break;
 
         case '4': // RECOMENDAR JUEGOS
+            recomendar_juegos(grafo_juegos);
             presioneTeclaParaContinuar();
             break;
 
@@ -262,7 +260,7 @@ void a_minusculas(char *textoIngresado, char *variableDestino) {
     variableDestino[i] = '\0';
 }
 
-// Hashea la clave para no guardarla en texto plano
+// Hashea la clave para no guardarla en texto plano4
 unsigned long hash_clave(const char *clave) {
     unsigned long hash = 5381;
     int c;
@@ -331,21 +329,6 @@ Usuario *iniciar_sesion(Map *usuarios) {
     if (opcion != '1') return NULL;
 
     return registrar_usuario(usuarios, nombre, nombre_llave);
-}
-
-// Menu de opciones del filtro avanzado (lo usa filtrar_juegos)
-void mostrar_menu_filtro() {
-    limpiarPantalla();
-    puts("\n=== Filtrar Juegos ===");
-    puts("1) Agregar categoria");
-    puts("2) Establecer desarrollador");
-    puts("3) Establecer precio maximo");
-    puts("4) Establecer metacritic minimo");
-    puts("5) Establecer multijugador (1 = Si, 0 = No)");
-    puts("6) Establecer plataforma");
-    puts("7) Filtrar y mostrar resultados");
-    puts("8) Limpiar filtros");
-    puts("9) Volver");
 }
 
 void vaciar_lista_filtro(List *lista) {
@@ -430,7 +413,7 @@ void filtrar_juegos(Map *grafo_juegos)
 
     char opcion;
     do {
-        mostrar_menu_filtro();
+        pantalla_menu_filtro();
         printf("Ingrese su opcion: ");
         scanf(" %c", &opcion);
         switch (opcion) {
@@ -480,17 +463,20 @@ void filtrar_juegos(Map *grafo_juegos)
             }
             case '7':
             {
+                List *resultados = list_create();
                 int encontrados = 0;
                 MapPair *pair = map_first(grafo_juegos);
                 while (pair != NULL) {
                     Videojuego *juego = (Videojuego *)pair->value;
                     if (cumple_filtros(juego, &filtro)) {
-                        mostrar_juego(juego);
+                        list_pushBack(resultados, juego);
                         encontrados++;
                     }
                     pair = map_next(grafo_juegos);
                 }
-                printf("Se encontraron %d juegos que cumplen con los filtros.\n", encontrados);
+                pantalla_resultados(resultados, encontrados, "Filtro aplicado");
+                list_clean(resultados);
+                free(resultados);
                 presioneTeclaParaContinuar();
                 break;
             }
@@ -514,43 +500,6 @@ void filtrar_juegos(Map *grafo_juegos)
             }
         }
     } while (opcion != '9');
-}
-
-// Muestra un juego en formato simple (la usa filtrar_juegos para el loop de resultados)
-void mostrar_juego(Videojuego *juego)
-{
-    printf("\nTitulo: %s | Metacritic: %d\n", juego->titulo, juego->metacritic);
-    printf("Desarrollador: %s | Precio: $%.2f | Multijugador: %s\n",
-           juego->desarrollador, juego->precio, juego->es_multijugador ? "Si" : "No");
-
-    // plataformas - recorremos la lista porque no hay un campo string directo
-    printf("Plataformas: ");
-    char *plat = list_first(juego->plataformas_lis);
-    while (plat != NULL) {
-        printf("%s", plat);
-        plat = list_next(juego->plataformas_lis);
-        if (plat != NULL) printf(", ");
-    }
-    printf(" | Lanzamiento: %s\n", juego->fecha_lanzamiento);
-
-    // etiquetas
-    printf("Etiquetas: ");
-    char *tag = list_first(juego->categorias_lis);
-    while (tag != NULL) {
-        printf("[%s] ", tag);
-        tag = list_next(juego->categorias_lis);
-    }
-    printf("\n----------------------------------------\n");
-}
-
-void mostrar_lista_juegos(List *lista)
-{
-    Videojuego *juego = list_first(lista);
-    while (juego != NULL)
-    {
-        mostrar_juego(juego);
-        juego = list_next(lista);
-    }
 }
 
 // Busca un juego por nombre y muestra la pantalla hero.
@@ -627,66 +576,34 @@ void agregar_juego_wishlist(Map *grafo_juegos, Map *usuarios, Usuario *usuario_a
 
 void eliminar_juego_wishlist(Map *usuarios, Usuario *usuario_activo)
 {
-    if(usuario_activo == NULL) //verificar el inicio de sesion
-    {
-        puts("Debes iniciar sesión para eliminar juegos de tu wishlist.");
-        presioneTeclaParaContinuar();
-        return;
-    }
-    if (list_size(usuario_activo->wishlist) == 0) //verificar si la wishlist esta vacia
-    {
-        puts("Tu wishlist está vacía.");
-        presioneTeclaParaContinuar();
-        return;
-    }
-    char titulo[150];
-    limpiarPantalla();
-    printf("Ingrese el título del juego: ");
-    scanf(" %149[^\n]", titulo);
+    if (usuario_activo == NULL || list_first(usuario_activo->wishlist) == NULL) return;
+
+    int num_elegido = 0;
+    pantalla_eliminar_wishlist(usuario_activo->wishlist, usuario_activo->nombre, &num_elegido);
+    if (num_elegido <= 0) return; // 0 es para volver
 
     Videojuego *juego = list_first(usuario_activo->wishlist);
-    while(juego != NULL) 
+    int i = 1;
+    while (juego != NULL)
     {
-        if(strcmp(juego->titulo, titulo) == 0)//verificar si el juego esta en la wishlist
+        if (i == num_elegido)
         {
-            list_popCurrent(usuario_activo->wishlist); //se elimina el juego de la wishlist
+            // Guardar en el historial (Pila)
             Accion *accion = malloc(sizeof(Accion));
             strcpy(accion->accion, "ELIMINAR");
             accion->juego = juego;
             stack_push(usuario_activo->historial, accion);
+            
+            list_popCurrent(usuario_activo->wishlist);
             guardar_usuarios(usuarios);
-            printf("\n\"%s\" eliminado de tu wishlist con éxito.\n", titulo);
+            
+            puts("\nJuego eliminado con éxito.");
             presioneTeclaParaContinuar();
             return;
         }
         juego = list_next(usuario_activo->wishlist);
+        i++;
     }
-    printf("\nNo se encontró \"%s\" en tu wishlist.\n", titulo);
-    presioneTeclaParaContinuar();
-}
-
-void mostrar_wishlist(Usuario *usuario_activo)
-{
-    if (usuario_activo == NULL)
-    {
-        puts("Debes iniciar sesión para ver tu wishlist.");
-        presioneTeclaParaContinuar();
-        return;
-    }
-
-    limpiarPantalla();
-    puts("========================================");
-    puts("           Mi Wishlist");
-    puts("========================================");
-
-    if(list_size(usuario_activo->wishlist) == 0)
-    {
-        puts("Tu wishlist está vacía.");
-        presioneTeclaParaContinuar();
-        return;
-    }
-    mostrar_lista_juegos(usuario_activo->wishlist);
-    presioneTeclaParaContinuar();
 }
 
 void deshacer_ultima_accion(Map *usuarios, Usuario *usuario_activo)
@@ -732,4 +649,20 @@ void deshacer_ultima_accion(Map *usuarios, Usuario *usuario_activo)
     presioneTeclaParaContinuar();
 }
 
+void recomendar_juegos(Map *grafo_juegos)
+{
+    char titulo[150];
+    pantalla_buscar_nombre(titulo); 
+    if (titulo[0] == '\0') return;
+
+    MapPair *pair = map_search(grafo_juegos, titulo);
+    if (pair == NULL)
+    {
+        pantalla_juego_no_encontrado();
+        return;
+    }
+
+    Videojuego *juego = (Videojuego *)pair->value;
+    pantalla_recomendaciones(juego->juegos_similares);
+}
 // FUNCIONES =======================================

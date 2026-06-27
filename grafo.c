@@ -72,7 +72,7 @@ void cargar_juegos(Map *grafo_juegos)
 
         juego->juegos_similares = list_create(); // LISTA ADYACENCIA
 
-        map_insert(grafo_juegos, juego->id, juego);
+        map_insert(grafo_juegos, juego->titulo, juego);
     }
 
     fclose(archivo);
@@ -87,21 +87,23 @@ void generar_conexiones(Map *grafo_juegos)
 
     /*
     El arreglo se crea para no generar una doble conexion, o sea, no se compare
-    un juego con otro que ya se comparo, además nos se ahorra la mitad de iteraciones
+    un juego con otro que ya se comparo, además nos se ahorra la mitad de iteraciones.
+    Además se crea una variable para saber la cantidad de juegos, porque un juego puede
+    tener más de una versión
     */
-    int indice = 0;
+    int cant_real = 0;
     Videojuego **arreglo_juegos = (Videojuego **)malloc(total_juegos * sizeof(Videojuego *));
     for (MapPair *pair = map_first(grafo_juegos) ; pair != NULL ; pair = map_next(grafo_juegos))
     {
-        arreglo_juegos[indice] = (Videojuego *)pair->value;
-        indice++;
+        arreglo_juegos[cant_real] = (Videojuego *)pair->value;
+        cant_real++;
     }
 
-    for (int i = 0 ; i < total_juegos ; i++)
+    for (int i = 0 ; i < cant_real ; i++)
     {
         // Se imprime cada 100 juegos
         if (i % 100 == 0) printf("Estado de carga: %d%%\n", (i * 100) / 9451);
-        for (int j = i + 1 ; j < total_juegos ; j++)
+        for (int j = i + 1 ; j < cant_real ; j++)
         {
             Videojuego *juego_base = arreglo_juegos[i];
             Videojuego *juego_comp = arreglo_juegos[j]; 
@@ -149,9 +151,9 @@ void guardar_conexiones_archivo(Map *grafo_juegos)
             Como la conexión es doble (A->B y B->A), se usa strcmp
             para guardar la conexion una sola vez en el archivo
             */
-            if (strcmp(juego->id, conexion->juego_vecino->id) < 0)
+            if (strcmp(juego->titulo, conexion->juego_vecino->titulo) < 0)
             {
-                fprintf(archivo, "%s,%s,%d\n", juego->id, conexion->juego_vecino->id, conexion->peso_similitud);
+                fprintf(archivo, "%s|%s|%d\n", juego->titulo, conexion->juego_vecino->titulo, conexion->peso_similitud);
             }
             conexion = list_next(juego->juegos_similares);
         }
@@ -168,24 +170,25 @@ int cargar_conexiones_archivo(Map *grafo_juegos)
     if (archivo == NULL) return 0;
 
     char linea[1024];
-    char id_1[50], id_2[50];
+    char titulo_1[150], titulo_2[150];
     int peso;
-    int total_conexiones = 572256;
     int i = 0;
 
+    // total de conexiones = 572256
     while (fgets(linea, sizeof(linea), archivo) != NULL)
     {
         if (i % 5722 == 0) printf("Estado de carga: %d%%\n", (i * 100) / 572256);
-        if (sscanf(linea, "%[^,],%[^,],%d", id_1, id_2, &peso) == 3)
+
+        if (sscanf(linea, "%[^|]|%[^|]|%d", titulo_1, titulo_2, &peso) == 3)
         {
-            MapPair *pair_1 = map_search(grafo_juegos, id_1);
-            MapPair *pair_2 = map_search(grafo_juegos, id_2);
+            MapPair *pair_1 = map_search(grafo_juegos, titulo_1);
+            Videojuego *juego_base = (pair_1 != NULL) ? (Videojuego *)pair_1->value : NULL;
 
-            if (pair_1 != NULL && pair_2 != NULL)
+            MapPair *pair_2 = map_search(grafo_juegos, titulo_2);
+            Videojuego *juego_comp = (pair_2 != NULL) ? (Videojuego *)pair_2->value : NULL;
+
+            if (juego_base != NULL && juego_comp != NULL)
             {
-                Videojuego *juego_base = (Videojuego *)pair_1->value;
-                Videojuego *juego_comp = (Videojuego *)pair_2->value;
-
                 // Conexión J1 ---> J2
                 Arista *conexion_1 = (Arista *)malloc(sizeof(Arista));
                 conexion_1->juego_vecino = juego_comp;
@@ -309,13 +312,11 @@ void liberar_memoria(Map *grafo_juegos)
         {
             Arista *ar_borrar = arista;
             arista = list_next(juego->juegos_similares);
-            free(arista);
+            free(ar_borrar);
         }
         list_clean(juego->juegos_similares);
 
         free(juego);
-        pair = map_next(grafo_juegos);
     }
-
     map_clean(grafo_juegos);
 }
