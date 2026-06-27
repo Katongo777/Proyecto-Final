@@ -6,7 +6,7 @@
 
 ## Objetivo del programa:
 Another Game? es una app de consola para recomendar videojuegos similares a los que has jugado y donde podrás gestionar una wishlist personal.
-La idea principal es que alguien que terminó un juego que le encantó pueda buscar y encontrar juegos parecidos a ese, basándose en etiquetas, plataforma, estudio y categorías.
+La idea principal es que si terminaste un juego que te encantó puedas buscar y encontrar juegos parecidos a ese, basándose en etiquetas, plataforma, estudio y categorías.
 El sistema usa mapas para la búsqueda rápida, un grafo de similitud para las recomendaciones, listas para la wishlist y una pila como historial para deshacer acciones.
 
 ---
